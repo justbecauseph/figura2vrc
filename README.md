@@ -1,5 +1,7 @@
 # figura2vrc — Figura → VRChat avatar conversion pipeline
 
+<img src="docs/preview.png" alt="A converted avatar as produced by the pipeline: T-posed, textured, VRChat-ready" width="300" align="right">
+
 Converts a [Figura](https://github.com/FiguraMC/Figura) (Blockbench) Minecraft
 player avatar into a working VRChat avatar: a rigid-limb Unity-Humanoid rig,
 PhysBones-ready skeleton, and in-game expression toggles built from the
