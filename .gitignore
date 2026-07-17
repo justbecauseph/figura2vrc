@@ -1,0 +1,9 @@
+# generated conversion output
+vrchat_export/
+
+# Blender backups
+*.blend1
+*.blend2
+
+# python
+__pycache__/
