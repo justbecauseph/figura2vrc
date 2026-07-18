@@ -102,6 +102,15 @@ What the script does, in order:
 
    The endpoint axis depends on each bone's local orientation — if the capsule
    gizmo juts sideways, move the value to another axis or flip its sign.
+
+   **Only add a PhysBone to a bone whose pivot sits at the part's attachment
+   point and which owns just that dangly part.** A monolithic hair bone that
+   pivots at the head center and owns the fringe plus every strand will swing
+   the whole hairdo as one slab — it looks detached, and long strands will
+   sweep across the body as if glued to whatever they pass. If the strands are
+   plain cubes (no bones of their own), skip hair physics entirely — rigid
+   hair is what Figura showed anyway — or promote the strands to groups in
+   Blockbench and re-export to get per-strand bones.
 7. Copy `unity/FiguraExpressionSetup.cs` into `Assets/Editor/`, adjust its
    config block (expression clip names, blink, prop toggle), then run
    **Tools > Figura Avatar > Setup Expressions**. This builds the FX
