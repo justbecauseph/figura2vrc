@@ -398,7 +398,12 @@ def main():
 
     # ------------------------------------------------------------ textures
     # Unpack embedded images; name them after pixel-identical PNGs found next
-    # to the glTF (Blockbench keeps textures as sibling files).
+    # to the glTF (Blockbench keeps textures as sibling files). Start from a
+    # clean directory so re-runs never leave stale extracts behind.
+    if os.path.isdir(texdir):
+        for old in os.listdir(texdir):
+            if old.lower().endswith(".png"):
+                os.remove(os.path.join(texdir, old))
     os.makedirs(texdir, exist_ok=True)
     refs = {}
     src_dir = os.path.dirname(os.path.abspath(args.gltf))
