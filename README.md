@@ -7,8 +7,10 @@ player avatar into a working VRChat avatar: a rigid-limb Unity-Humanoid rig,
 PhysBones-ready skeleton, and in-game expression toggles built from the
 model's Blockbench animations.
 
-Born from one real conversion, debugged end to end — the docs include every
-pitfall hit along the way so you don't have to rediscover them.
+Debugged end to end on real conversions (two avatars and counting) — the docs
+include every pitfall hit along the way so you don't have to rediscover them,
+plus a per-part PhysBones tuning table and a checklist for adapting the
+pipeline to a new avatar.
 
 ## Quickstart
 

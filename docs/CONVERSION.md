@@ -14,7 +14,18 @@ avatar.fbx ──(Unity + VRChat SDK + FiguraExpressionSetup.cs)──> publishe
 ## Prerequisites
 
 - **Blockbench** with the model open — export via `File > Export > Export glTF`
-  (include animations).
+  with exactly these options:
+  - Encoding: **ASCII (glTF)**
+  - Model Export Scale: **16** (16 pixels = 1 metre)
+  - Embed Textures: **on**
+  - Export Groups as Armature: **on** (critical — produces the skeleton)
+  - Export Animations: **on**
+
+  Note: Blockbench may silently drop animations whose animators only contain
+  effects or reference groups not present in the model (Figura locomotion and
+  scripted-gear clips typically vanish). Check `convert_report.json`'s
+  `animations` list after converting — in practice the dropped ones are the
+  clips VRChat can't use anyway.
 - **Blender 4.2+** (developed on 5.2), used headless; no manual Blender work.
 - **Unity 2022.3.x** via **VRChat Creator Companion** with an *Avatars* project
   (SDK3). A VRChat account with "New User" trust rank or higher (uploading is
@@ -76,8 +87,21 @@ What the script does, in order:
    View Position `(0, <eye_height_m>, ~0.2)`, Lip Sync: Default.
 6. **PhysBones** on every dangly bone (hair, tails, skirt): add
    `VRC Phys Bone`, set **Endpoint Position** (single bones won't swing
-   without it — check the capsule gizmo direction), start with Pull 0.2 /
-   Spring 0.8 / Gravity 0.2. Test in Play mode by dragging the avatar around.
+   without it — check the capsule gizmo direction; multi-segment chains work
+   without one). Starting values by part type, tuned in Play mode by dragging
+   the avatar around:
+
+   | Part type | Endpoint | Pull | Spring | Gravity | Extra |
+   |---|---|---|---|---|---|
+   | Hair strand / twin tail | (0, −0.4, 0) | 0.2 | 0.8 | 0.2 | |
+   | Tail (multi-bone chain) | (0, −0.15, 0) on tip | 0.15 | 0.7 | 0.3 | Immobile ≈ 0.2 |
+   | Cloth (tie, skirt panel) | (0, −0.25, 0) | 0.2 | 0.6 | 0.3 | |
+   | Small tuft / dangle | (0, −0.1, 0) | 0.3 | 0.8 | 0.1 | |
+   | Ears (point up!) | (0, +0.12, 0) | 0.3 | 0.9 | 0.05 | |
+   | Chest | (0, −0.06, 0) | 0.35 | 0.85 | 0 | Immobile ≈ 0.3 |
+
+   The endpoint axis depends on each bone's local orientation — if the capsule
+   gizmo juts sideways, move the value to another axis or flip its sign.
 7. Copy `unity/FiguraExpressionSetup.cs` into `Assets/Editor/`, adjust its
    config block (expression clip names, blink, prop toggle), then run
    **Tools > Figura Avatar > Setup Expressions**. This builds the FX
@@ -106,7 +130,7 @@ overwrites; only newly added bones ever need re-configuring.
 | # | Symptom | Cause | Fix |
 |---|---------|-------|-----|
 | 1 | "Required human bone 'X' not found" | **Strip Bones** import option deletes zero-weight bones — our elbow/knee/hand/foot bones are intentionally weightless | Uncheck Strip Bones on the Rig tab |
-| 2 | Prop won't animate ("Binding warning: transforms already bound by a Humanoid avatar"); accessories twitch on their own; resting face looks wrong | Unity's humanoid auto-mapper stuffs random head-child bones into the **Jaw / Left Eye / Right Eye** slots. Humanoid-bound transforms silently ignore FX animation, and VRChat's eye-look actively rotates whatever is in the Eye slots | Configure → Head tab → set Jaw and both Eyes to **None** |
+| 2 | Prop won't animate ("Binding warning: transforms already bound by a Humanoid avatar"); accessories twitch on their own; resting face looks wrong | Unity's humanoid auto-mapper stuffs random head-child bones into the **Jaw / Left Eye / Right Eye** slots. Humanoid-bound transforms silently ignore FX animation, and VRChat's eye-look actively rotates whatever is in the Eye slots. This happens on **every** avatar with whatever bones are handy: one model got its glasses as Jaw and hair clips as Eyes; the next got its earring as Jaw and headphone ears as Eyes | Configure → Head tab → set Jaw and both Eyes to **None**, every single time |
 | 3 | SDK error "Spine hierarchy missing elements: Neck, Shoulders" | VRChat requires Neck + Shoulders; Unity Humanoid does not | The converter adds them (zero-weight); map them in Configure |
 | 4 | Face parts baked ~10 cm off in the exported model | The Blender glTF importer leaves an imported action **active**; its pose contaminates the armature-modifier and rest-pose bakes | Converter detaches the action, mutes NLA, resets the pose before any bake |
 | 5 | Some expressions import as "0 frames, empty animation" | Single-frame held poses export as zero-length FBX takes; Unity drops them | Converter pads them into two-key rest→pose ramps |
@@ -115,6 +139,29 @@ overwrites; only newly added bones ever need re-configuring.
 | 8 | 1-pixel face details render as smeared/wrong colors | Default DXT texture compression works on 4×4 blocks | Texture Compression: **None** (also Filter: Point) |
 | 9 | Eyes/brows slowly drift upward between blinks; no blinking in-game at all | (a) Generated pause keyframes without flat tangents make the spline bow; (b) Unity forces animator layer 0 to weight 1 in-editor but **VRChat honors the serialized weight** | Setup script writes flat tangents and sets layer 0 `defaultWeight = 1` explicitly |
 | 10 | Resting face reads "angry" although the model data is flat | Flat brow bars sat level with the round glasses lens tops, which render in front and clip them into diagonal wedges | `LIFT_PIXELS`/`--lift` raises the brow geometry+bones half a pixel |
+
+## Adapting to a new avatar
+
+Checklist distilled from converting a second avatar with this pipeline:
+
+1. **One Unity project per avatar** — the scripts expect their own
+   `Assets/avatar.fbx` / `Assets/avatar_anims.fbx`; sharing a project
+   collides.
+2. Run the converter with per-model flags: `--no-lift` unless the model needs
+   the cosmetic offsets, `--height` if the character shouldn't be 1.7 m,
+   `--front-marker <bone>` if auto-detection can't find a front-mounted bone
+   (auto tries glasses/front-hair/iris names).
+3. Make a copy of `FiguraExpressionSetup.cs`, rename the **class and the
+   MenuItem**, and adjust the config block:
+   - `FaceExpressions`: the model's actual clip names (one model called its
+     sleep pose `sleep`, the next `sleeping`);
+   - the prop toggle works for any equip/remove pair — glasses
+     (`GlassesOff`/`GlassesOn`) and a mask (`EquipMask`/`RemoveMask`) both
+     mapped onto it unchanged.
+4. Missing clips are skipped with a console warning, so a model without a
+   blink or a prop still converts.
+5. The humanoid Configure step must be repeated per avatar — including
+   clearing Jaw/Eyes (trap #2 finds new bones every time).
 
 ## What intentionally does NOT carry over from Figura
 
