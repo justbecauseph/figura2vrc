@@ -16,11 +16,16 @@ Shader "figura2vrc/MinecraftUnlit"
         _MainTex ("Texture", 2D) = "white" {}
         _Cutoff ("Alpha Cutoff", Range(0, 1)) = 0.5
         _ShadeStrength ("Directional Shade Strength", Range(0, 1)) = 1.0
+        // Double-sided by default: Blockbench authors routinely UV hidden
+        // faces to transparent texture corners, relying on the editor's
+        // double-sided preview — with backface culling those spots become
+        // see-through holes.
+        [Enum(UnityEngine.Rendering.CullMode)] _Cull ("Cull", Float) = 0
     }
     SubShader
     {
         Tags { "RenderType" = "TransparentCutout" "Queue" = "AlphaTest" }
-        Cull Back
+        Cull [_Cull]
 
         Pass
         {
