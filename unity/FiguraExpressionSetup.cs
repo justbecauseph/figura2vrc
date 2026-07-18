@@ -165,14 +165,28 @@ public static class FiguraExpressionSetup
         return clips;
     }
 
+    // Bones the FX layer must never write: humanoid-mapped bones are ignored
+    // by the animator anyway, and root curves shift the whole avatar. Figura
+    // full-body poses (e.g. a lying-down "sleeping" clip) contain both.
+    static readonly HashSet<string> SkeletonBones = new HashSet<string>
+    {
+        "root", "Hips", "Spine", "Chest", "Neck", "Head",
+        "LeftShoulder", "LeftUpperArm", "LeftLowerArm", "LeftHand",
+        "RightShoulder", "RightUpperArm", "RightLowerArm", "RightHand",
+        "LeftUpperLeg", "LeftLowerLeg", "LeftFoot",
+        "RightUpperLeg", "RightLowerLeg", "RightFoot",
+    };
+
     // Keep only curves that move over the clip OR hold a value different from
     // the model's rest pose (held-pose clips never move, they just sit
     // off-rest from frame 0). Components are kept as whole groups so
-    // quaternions stay intact.
+    // quaternions stay intact. Body-skeleton curves are always dropped.
     static AnimationClip StripStaticCurves(AnimationClip src, string name, Transform avatarRoot)
     {
         var dst = new AnimationClip { name = name, frameRate = src.frameRate };
-        var bindings = AnimationUtility.GetCurveBindings(src);
+        var bindings = AnimationUtility.GetCurveBindings(src)
+            .Where(b => !SkeletonBones.Contains(b.path.Split('/').Last()))
+            .ToArray();
         string GroupKey(EditorCurveBinding b)
         {
             int dot = b.propertyName.LastIndexOf('.');
