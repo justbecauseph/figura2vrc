@@ -91,8 +91,12 @@ def parse_args():
     ap.add_argument("--lift", action="append", default=[], metavar="BONE=PIXELS",
                     help="raise a bone and its vertices by N Blockbench pixels "
                          "(repeatable; overrides the in-file LIFT_PIXELS)")
+    ap.add_argument("--no-lift", action="store_true",
+                    help="disable all cosmetic lifts, including LIFT_PIXELS")
     args = ap.parse_args(argv)
-    if args.lift:
+    if args.no_lift:
+        args.lifts = {}
+    elif args.lift:
         args.lifts = {}
         for spec in args.lift:
             name, _, px = spec.partition("=")
