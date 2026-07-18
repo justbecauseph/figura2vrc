@@ -410,14 +410,22 @@ def main():
                 pass
 
     tex_map = {}
+    used_names = set()
     packed = [im for im in bpy.data.images if im.packed_file]
     for i, im in enumerate(packed):
         name = f"texture_{i}.png"
         for fname, ref in refs.items():
-            if (list(ref.size) == list(im.size)
-                    and tuple(ref.pixels[:64]) == tuple(im.pixels[:64])):
+            # Full-pixel comparison: textures often share their first rows
+            # (e.g. both start transparent), so sampling a prefix mismatches.
+            if (fname not in used_names
+                    and list(ref.size) == list(im.size)
+                    and tuple(ref.pixels[:]) == tuple(im.pixels[:])):
                 name = fname
                 break
+        if name in used_names:
+            warn(f"texture name collision on {name}; keeping generic name")
+            name = f"texture_{i}.png"
+        used_names.add(name)
         out = os.path.join(texdir, name)
         im.file_format = 'PNG'
         im.filepath_raw = out
